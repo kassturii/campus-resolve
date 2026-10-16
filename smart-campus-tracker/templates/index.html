@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Campus Grievance & Resource Tracker</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); padding: 24px; }
+    .navbar { max-width: 1200px; margin: 0 auto 32px auto; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 1.5rem; font-weight: 700; }
+    .logo span { color: var(--accent); }
+    .badge { background: #0369a1; color: #e0f2fe; padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
+    .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1.3fr; gap: 24px; }
+    @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+    .card { background-color: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; }
+    input, select, textarea { width: 100%; padding: 10px 14px; background-color: #0b1329; border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 0.95rem; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .primary-btn { background-color: var(--accent); color: #0f172a; width: 100%; }
+    .secondary-btn { background-color: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .feed-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .ticket-list { display: flex; flex-direction: column; gap: 16px; max-height: 580px; overflow-y: auto; }
+    .ticket { background-color: #0b1329; border: 1px solid var(--border); padding: 16px; border-radius: 8px; }
+    .ticket-top { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 8px; }
+    .ticket-id { font-weight: 700; color: var(--accent); }
+    .ticket-status { padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 0.75rem; }
+    .status-pending { background: #78350f; color: #fde68a; }
+    .status-progress { background: #1e3a8a; color: #bfdbfe; }
+    .status-resolved { background: #064e3b; color: #a7f3d0; }
+    .ticket-desc { font-size: 0.95rem; margin-bottom: 12px; }
+    .ticket-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-muted); }
+    .status-dropdown { width: auto; padding: 4px 8px; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="logo">Campus<span>Resolve</span></div>
+    <div class="badge">Live Portal</div>
+  </header>
+
+  <main class="container">
+    <section class="card form-card">
+      <h2>Lodge a Grievance</h2>
+      <p class="subtitle">Report broken lab hardware, hostel issues, or campus amenities.</p>
+      
+      <form id="grievanceForm">
+        <div class="form-group">
+          <label>Student Name / Roll No.</label>
+          <input type="text" id="student_name" placeholder="e.g. Kasturi Singh" required>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="category" required>
+              <option value="Computer Lab">Lab / Hardware</option>
+              <option value="Hostel Maintenance">Hostel Maintenance</option>
+              <option value="Classroom & Projector">Classroom & AV</option>
+              <option value="Sanitation & Water">Sanitation & Water</option>
+              <option value="Lost & Found">Lost & Found</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Priority</label>
+            <select id="priority">
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Campus Location</label>
+          <input type="text" id="location" placeholder="e.g. Block C, Lab 204 or Hostel Room 12" required>
+        </div>
+
+        <div class="form-group">
+          <label>Issue Description</label>
+          <textarea id="description" rows="3" placeholder="Describe the fault or required repair..." required></textarea>
+        </div>
+
+        <button type="submit" class="btn primary-btn">Submit Ticket</button>
+      </form>
+    </section>
+
+    <section class="card feed-card">
+      <div class="feed-header">
+        <h2>Live Campus Tickets</h2>
+        <button class="btn secondary-btn" id="refreshBtn">Refresh</button>
+      </div>
+
+      <div class="ticket-list" id="ticketList">
+        <p class="subtitle">No grievances lodged yet.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    async function fetchTickets() {
+      const ticketList = document.getElementById("ticketList");
+      try {
+        const res = await fetch("/api/grievances");
+        const tickets = await res.json();
+
+        if (!tickets || tickets.length === 0) {
+          ticketList.innerHTML = `<p class="subtitle">No grievances lodged yet. Submit your first ticket above!</p>`;
+          return;
+        }
+
+        ticketList.innerHTML = tickets.map(t => {
+          let statusClass = "status-pending";
+          if (t.status === "In Progress") statusClass = "status-progress";
+          if (t.status === "Resolved") statusClass = "status-resolved";
+
+          return `
+            <div class="ticket">
+              <div class="ticket-top">
+                <span class="ticket-id">#TICKET-${t.id} [${t.category}]</span>
+                <span class="ticket-status ${statusClass}">${t.status}</span>
+              </div>
+              <div class="ticket-desc">${t.description}</div>
+              <div class="ticket-meta">
+                <span>📍 ${t.location} | 👤 ${t.student_name}</span>
+                <select class="status-dropdown" onchange="changeStatus(${t.id}, this.value)">
+                  <option value="Pending" ${t.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                  <option value="In Progress" ${t.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                  <option value="Resolved" ${t.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                </select>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        ticketList.innerHTML = `<p style="color: #ef4444;">Error fetching tickets.</p>`;
+      }
+    }
+
+    document.getElementById("grievanceForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        student_name: document.getElementById("student_name").value,
+        category: document.getElementById("category").value,
+        priority: document.getElementById("priority").value,
+        location: document.getElementById("location").value,
+        description: document.getElementById("description").value,
+      };
+
+      const res = await fetch("/api/grievances", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        document.getElementById("grievanceForm").reset();
+        fetchTickets();
+      } else {
+        alert("Error submitting ticket");
+      }
+    });
+
+    window.changeStatus = async (id, status) => {
+      await fetch(`/api/grievances/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      fetchTickets();
+    };
+
+    document.getElementById("refreshBtn").addEventListener("click", fetchTickets);
+    fetchTickets();
+  </script>
+</body>
+</html>
