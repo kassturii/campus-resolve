@@ -27,11 +27,6 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="ticket-desc">${t.description}</div>
             <div class="ticket-meta">
               <span>📍 ${t.location} | 👤 ${t.student_name}</span>
-              <select class="status-dropdown" onchange="changeStatus(${t.id}, this.value)">
-                <option value="Pending" ${t.status === 'Pending' ? 'selected' : ''}>Pending</option>
-                <option value="In Progress" ${t.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                <option value="Resolved" ${t.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
-              </select>
             </div>
           </div>
         `;

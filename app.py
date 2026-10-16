@@ -1,84 +1,66 @@
-import sqlite3
-from flask import Flask, render_template, request, jsonify
-from datetime import datetime
+import streamlit as st
+from groq import Groq
 
-app = Flask(__name__)
-DB_NAME = "campus_tracker.db"
+st.set_page_config(page_title="AI Code Optimizer", page_icon="⚡", layout="wide")
 
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS grievances (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            location TEXT NOT NULL,
-            description TEXT NOT NULL,
-            priority TEXT NOT NULL,
-            status TEXT DEFAULT 'Pending',
-            created_at TEXT NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
+st.title("⚡ AI Code Optimizer & Complexity Analyzer")
+st.write(
+    "Refactor code for performance, memory efficiency, and cleaner design using **Llama 3**."
+)
 
-init_db()
+with st.sidebar:
+    st.header("⚙️ Configuration")
+    api_key = st.text_input("Enter your Groq API Key:", type="password")
+    st.caption("Get a free key from [console.groq.com](https://console.groq.com)")
 
-@app.route("/")
-def home():
-    return render_template("index.html")
+    model_choice = st.selectbox(
+        "Select Model:",
+        ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]
+    )
 
-@app.route("/api/grievances", methods=["GET"])
-def get_grievances():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM grievances ORDER BY id DESC")
-    rows = cursor.fetchall()
-    conn.close()
-    return jsonify([dict(row) for row in rows])
+    language = st.selectbox(
+        "Programming Language:",
+        ["C", "Java", "Python", "C++", "JavaScript"]
+    )
 
-@app.route("/api/grievances", methods=["POST"])
-def add_grievance():
-    data = request.json
-    student_name = data.get("student_name")
-    category = data.get("category")
-    location = data.get("location")
-    description = data.get("description")
-    priority = data.get("priority", "Medium")
-    created_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+col1, col2 = st.columns(2)
 
-    if not all([student_name, category, location, description]):
-        return jsonify({"error": "Missing required fields"}), 400
-
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO grievances (student_name, category, location, description, priority, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (student_name, category, location, description, priority, created_at))
-    conn.commit()
-    new_id = cursor.lastrowid
-    conn.close()
-
-    return jsonify({"message": "Grievance lodged successfully", "ticket_id": new_id}), 201
-
-@app.route("/api/grievances/<int:ticket_id>/status", methods=["PATCH"])
-def update_status(ticket_id):
-    data = request.json
-    new_status = data.get("status")
+with col1:
+    st.subheader(f"Input Code ({language})")
     
-    if new_status not in ["Pending", "In Progress", "Resolved"]:
-        return jsonify({"error": "Invalid status"}), 400
+    # Corrected: added opening triple quotes """
+    default_c_code = """// Inefficient O(n^2) search
+int findMax(int arr[], int n) {
+    int max = arr[0];
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (arr[j] > max) {
+                max = arr[j];
+            }
+        }
+    }
+    return max;
+}"""
+    
+    code_input = st.text_area("Paste code here:", value=default_c_code, height=360)
+    optimize_btn = st.button("🚀 Optimize Code", type="primary")
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("UPDATE grievances SET status = ? WHERE id = ?", (new_status, ticket_id))
-    conn.commit()
-    conn.close()
+with col2:
+    st.subheader("Optimized Solution & Analysis")
 
-    return jsonify({"message": "Status updated successfully"})
+    if optimize_btn:
+        if not api_key:
+            st.error("⚠️ Please paste your Groq API key in the sidebar.")
+        elif not code_input.strip():
+            st.warning("⚠️ Please provide some code to optimize.")
+        else:
+            with st.spinner("Analyzing complexity and optimizing..."):
+                try:
+                    client = Groq(api_key=api_key)
 
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+                    # Corrected prompt formatting
+                    prompt = f"""You are an expert compiler and software optimization engineer.
+Analyze this {language} code:
+
+```{language.lower()}
+{code_input}
